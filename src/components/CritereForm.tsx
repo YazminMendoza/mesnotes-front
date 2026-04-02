@@ -12,9 +12,17 @@ interface Critere {
 export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
     const [criteres, setCriteres] = useState<Critere[]>(initialCriteres || []);
 
-//Pour ajouter un nouveau critère vide à l'interface utilisateur
-    const addRow = () => {
-        setCriteres([...criteres, { nom: '', note: 0, poids: 0 }]);
+//Pour ajouter un nouveau critère vide et l'envoyer au backend
+    const addRow = async () => {
+        try {
+            const newCritere = { nom: '', note: 0, poids: 0 };
+            const response = await api.post(`/sujets/${sujetId}/criteres`, newCritere);
+            const updateSujet = response.data; 
+            setCriteres(updateSujet.listeCriteres);
+            onUpdate();
+        } catch (error){
+            console.error("Erreur lors de la création du critère:", error);
+        }
     };
     
 //Pour envoyer le nouveau critére à l'API Spring Boot 
@@ -28,14 +36,52 @@ export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
                 setCriteres(updatedSujet.listeCriteres);
                 onUpdate(); // On notifie le parent pour rafraîchir les données
             } else {
-//ICI LA LOGIGUE DE MISE À JOUR D'UN CRITÈRE EXISTANT AVEC UN PUT
-                console.log("En train de mettre à jour...");
+//Si le critère existe déjà, on le met à jour avec un PUT
+                await api.put(`/criteres/${critere.id}`, critere);
+                onUpdate();                
             }            
         } catch (error) {
-            console.error("Erreur lors de la sauvegarde du critèere :", error);
+            console.error("Erreur lors de la sauvegarde du critère :", error);
         }
     };
 
+//Pour effacer un critère
+    const handleDelete = async (critereId: string) => {
+        if (!window.confirm("Voulez-vous vraiment supprimer ce critère d'évaluation ?")) return;
+        try {
+            await api.delete(`/criteres/${critereId}`);
+            setCriteres((prevCriteres) => prevCriteres.filter(c => c.id !== critereId));
+            onUpdate();
+        } catch (error){
+            console.log("Erreur lors de la suppression :", error);
+        }
+    };
+
+//Pour sauvegarder automatiquement (PUT)
+    const autoSave = async(critere: Critere) => {
+        if (!critere.id) return;
+        try {
+            await api.put(`/criteres/${critere.id}`, critere);
+            onUpdate();
+        } catch (error) {
+            console.error("Erreur lors de l'auto-save:", error);
+        }
+    };    
+
+//Debounce
+    const handleInputChange = (index: number, field: string, value: any) => {
+//Mettre à jour l'experience utilisateur immédiatement
+        const newCriteres = [...criteres];
+        newCriteres[index] = { ...newCriteres[index], [field]: value };
+        setCriteres(newCriteres);
+//On nettoie des sauvegardes en attente
+        const timerId = (newCriteres[index] as any)._timer;
+        if (timerId) clearTimeout(timerId);
+//Sauvegarde dans les suivants 500ms
+        (newCriteres[index] as any)._timer = setTimeout(() => {
+            autoSave(newCriteres[index]);
+        }, 500);
+    }    
     return (
         <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 mt-4">
             <h4 className="font-bold text-gray-700 mb-4 flex justify-between items-center">
@@ -52,40 +98,28 @@ export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
                             className="flex-1 border-b border-gray-300 focus:online-none focus:border-blue-500 text-sm"
                             placeholder="Nom (ex: contrôle continu)"
                             value={c.nom}
-                            onChange={(e) => {
-                                const newC = [...criteres];
-                                newC[index].nom = e.target.value;
-                                setCriteres(newC);
-                            }}
+                            onChange={(e) => handleInputChange(index, 'nom', e.target.value)}
                         />
                         <input
                             type="number"
                             className="w-16 border-b border-gray-300 text-center text-sm"
                             placeholder="Note"
                             value={c.note}
-                            onChange={(e) => {
-                                const newC = [...criteres];
-                                newC[index].note = parseFloat(e.target.value);
-                                setCriteres(newC);
-                            }}
+                            onChange={(e) => handleInputChange(index, 'note', parseFloat(e.target.value))}
                         />
                         <input
                             type="number"
                             className="w-16 border-b border-gray-300 text-center text-sm font-bold text-blue-600"
                             placeholder="Poids"
                             value={c.poids}
-                            onChange={(e) => {
-                                const newC = [...criteres];
-                                newC[index].poids = parseFloat(e.target.value);
-                                setCriteres(newC);
-                            }}
-                        />
+                            onChange={(e) => handleInputChange(index, 'poids', parseFloat(e.target.value))}
+                        />                        
                         <button
-                            onClick={() => handleSave(c, index)}
-                            className="text-green-600 hover:text-green-800"
-                            title="Enregistrer"                        
+                            onClick={() => handleDelete(c.id!)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Supprimer"
                         >
-                            <Save size={18}/>
+                            <Trash2 size={18}/>
                         </button>
                     </div>
                 ))}
