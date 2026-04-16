@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
-import api from '../api/axiosConfig';
+import { Plus, Trash2 } from 'lucide-react';
+import { sujetApi } from '../api/sujetApi';
+import { critereApi } from '../api/critereApi';
 
 interface Critere {
     id?: string;
@@ -16,7 +17,7 @@ export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
     const addRow = async () => {
         try {
             const newCritere = { nom: '', note: 0, poids: 0 };
-            const response = await api.post(`/sujets/${sujetId}/criteres`, newCritere);
+            const response = await sujetApi.addCritere(sujetId, newCritere);
             const updateSujet = response.data; 
             setCriteres(updateSujet.listeCriteres);
             onUpdate();
@@ -25,31 +26,11 @@ export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
         }
     };
     
-//Pour envoyer le nouveau critére à l'API Spring Boot 
-    const handleSave = async (critere: Critere, index: number) => {
-        try {
-//S'il n'as pas d'ID, c'est un nouveau critère, on le crée avec un POST
-            if (!critere.id) {
-                const response = await api.post(`/sujets/${sujetId}/criteres`, critere);
-//On met à jour la liste locale avec l'ID retourné par l'API
-                const updatedSujet = response.data;
-                setCriteres(updatedSujet.listeCriteres);
-                onUpdate(); // On notifie le parent pour rafraîchir les données
-            } else {
-//Si le critère existe déjà, on le met à jour avec un PUT
-                await api.put(`/criteres/${critere.id}`, critere);
-                onUpdate();                
-            }            
-        } catch (error) {
-            console.error("Erreur lors de la sauvegarde du critère :", error);
-        }
-    };
-
 //Pour effacer un critère
     const handleDelete = async (critereId: string) => {
         if (!window.confirm("Voulez-vous vraiment supprimer ce critère d'évaluation ?")) return;
         try {
-            await api.delete(`/criteres/${critereId}`);
+            await critereApi.delete(critereId);
             setCriteres((prevCriteres) => prevCriteres.filter(c => c.id !== critereId));
             onUpdate();
         } catch (error){
@@ -61,7 +42,7 @@ export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
     const autoSave = async(critere: Critere) => {
         if (!critere.id) return;
         try {
-            await api.put(`/criteres/${critere.id}`, critere);
+            await critereApi.update(critere.id, critere);
             onUpdate();
         } catch (error) {
             console.error("Erreur lors de l'auto-save:", error);
