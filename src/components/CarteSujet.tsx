@@ -61,10 +61,41 @@ export const CarteSujet = ({ id, nom: initialNom, note: initialNote, listeCriter
         e.stopPropagation();
         try {
             const response = await sujetApi.calculerMoyenne(id);
-            setLocalNote(response.data.note);
+            if(response.data && typeof response.data.note === 'number'){
+                setLocalNote(response.data.note);
+            }
+            
             onRefresh();
         } catch (error) {
             console.error("Erreur lors du calcul :", error);
+        }
+    };
+//On évalue s'il y a des critères avec poids mais note de 0 pour habiliter plus tard le bouton de Atteindre
+    const ilyaCriteresVides  = listeCriteres.some (
+        (c: any) => (c.note === 0 || c.note === null) && c.poids > 0
+    );
+
+    const handleObjectif = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(!ilyaCriteresVides){
+//S'il n'ya a pas des critères vides, le bouton ne marche pas et on a un message            
+            alert("Cette option te permet de calculer quelles notes tu devrais obtenir dans tes critères d'évaluation encore pas évalués pour atteindre une moyenne souhaitée. Ajoute au moins un critère avec une note de 0 et un poids supérieur à 0.");
+            return;
+        }
+        const target = window.prompt("Je veux obtenir cette note (ex: 15.0)");
+        const targetValue = parseFloat(target || "");
+        if (isNaN(targetValue) || targetValue < 0) {
+            alert("Veuillez entrer une note valide");
+            return;
+        }
+        try {
+            const response = await sujetApi.atteindreObjectif(id, targetValue);
+            if (response.data && typeof response.data.note === 'number') {
+                setLocalNote(response.data.note);
+            }
+            onRefresh();         
+        } catch (error) {
+            console.error("Erreur lors du calcul des notes nécessaires pour atteindre la moyenne objetive");
         }
     };
 
@@ -160,8 +191,16 @@ export const CarteSujet = ({ id, nom: initialNom, note: initialNote, listeCriter
                             className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-blue-700 shadow-sm">
                             <Calculator size={16}/> Calculer
                         </button>
-                        <button className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-gray-200">
-                            <Target size={16}/> Objectif
+{/*S'il n'y a pas des critères vides, le bouton Atteindre est désactivé et a un format différent*/}                        
+                        <button 
+                            onClick={handleObjectif}
+                            className={`flex-1 py-2 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm
+                                ${ilyaCriteresVides
+                                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                                    : "bg-gray-50 text-gray-400"
+                                }`}
+                        >
+                            <Target size={16}/> Atteindre
                         </button>
                     </div>
 

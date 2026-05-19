@@ -9,6 +9,9 @@ export const sujetApi = {
     create: (data: any) => api.post(`/sujets`, data),
 //Calculer la note moyenne
     calculerMoyenne: (id: string) => api.put(`/sujets/${id}/calculer`),
+//Calcules notes manquantes pour atteindre un objectif
+    atteindreObjectif: (id: string, objectif: number) =>
+        api.put(`/sujets/${id}/atteindre`, {objectif}),
 //Effacer un sujet
     delete: (id: string) => api.delete(`/sujets/${id}`),
 //Créer et ajouter un critère

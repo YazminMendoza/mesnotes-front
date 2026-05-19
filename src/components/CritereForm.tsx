@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { sujetApi } from '../api/sujetApi';
 import { critereApi } from '../api/critereApi';
@@ -13,6 +13,10 @@ interface Critere {
 export const CritereForm = ({ sujetId, initialCriteres, onUpdate }: any) => {
     const [criteres, setCriteres] = useState<Critere[]>(initialCriteres || []);
 
+    useEffect(() => {
+        setCriteres(initialCriteres);
+    }, [initialCriteres]);
+    
 //Pour ajouter un nouveau critère vide et l'envoyer au backend
     const addRow = async () => {
         try {
